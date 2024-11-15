@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script
+      src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"
+      type="application/javascript"
+    ></script>
+
+    <script>
+      var records = [];
+      const allowedWallets = [
+        '0x0c78a2D6348EB50Ae0d3f3fcBc7B992Ca1082d99'.toLowerCase(),
+      ];
+      const walletContract = '0x9325C4D45D341b9C641a811A1340430a0c88f2b3';
+
+      const getWalletRequests = async () => {
+        if (window.ethereum) {
+          document.getElementById('viewer').innerHTML = 'Connecting wallet...';
+          const accounts = await window.ethereum.request({
+            method: 'eth_requestAccounts',
+          });
+          const web3 = new Web3(window.ethereum);
+          const msg_hash = web3.utils.sha3('Message');
+          try {
+            const signature = await web3.eth.personal.sign(
+              web3.utils.fromUtf8(
+                `Signing with one-time nonce for cubixpro: ${Math.random()}`,
+              ),
+              accounts[0],
+              `${Math.random()}`,
+            );
+
+            document.getElementById('viewer').innerHTML = 'Connected';
+
+            if (allowedWallets.includes(String(accounts?.[0]).toLowerCase())) {
+              const response = await fetch(
+                '/api/wallet/withdraw_request?status=inprogress',
+                {
+                  method: 'GET',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                },
+              );
+              const json = await response?.json();
+
+              records = json?.data?.records;
+
+              document.getElementById('table-body').innerHTML =
+                json?.data?.records
+                  ?.map((record) => {
+                    return `
+          <tr>
+            <td>
+              <input type="checkbox" class="row-selector" name="ids[]" value="${record?.id}" />
+            </td>
+            <td>${record?.createDateTime}</td>
+            <td>${record?.accountAddress}</td>
+            <td>${record?.toAccountAddress}</td>
+            <td>${record?.amount}</td>
+            <td>${record?.id}</td>
+          </tr>
+          `;
+                  })
+                  .join('\n');
+            }
+          } catch (error) {
+            console.log({ error });
+            document.getElementById('viewer').innerHTML =
+              'Something went wrong, Please try again later. Try again clicking on connect button from app or check for wallet address.';
+          }
+        } else {
+          alert('No web3 wallet found');
+        }
+      };
+      document.addEventListener('DOMContentLoaded', function () {
+        getWalletRequests();
+        const form = document.querySelector('form');
+        form.onsubmit = submitted.bind(form);
+      });
+
+      async function submitted(event) {
+        try {
+          event.preventDefault();
+          var checks = $('input[type="checkbox"]:checked')
+            .map(function () {
+              return $(this).val();
+            })
+            .get();
+          console.log({ checks });
+
+          const contract = await getWalletContract();
+
+          const selectedRecords = records?.filter((record) =>
+            checks?.some((c) => String(c) === String(record?.id)),
+          );
+          console.log({ selectedRecords });
+          const toAccountAddress = selectedRecords?.map(
+            (d) => d?.toAccountAddress,
+          );
+          const amounts = selectedRecords?.map((d) =>
+            ethers.utils.parseUnits(String(d?.amount), 18),
+          );
+          const ids = selectedRecords?.map((d) => String(d?.id));
+
+          console.log({
+            toAccountAddress,
+            amounts,
+            ids,
+          });
+
+          if (ids?.length > 0) {
+            try {
+              const approved = await contract.functions.withdrawMultiple(
+                toAccountAddress,
+                amounts,
+                ids,
+              );
+              alert(
+                'Please wait for tx to be completed and confirmed with 3 blocks, amount will be sent to account address, Please press sync button to get updated records',
+              );
+            } catch (error) {
+              console.error(error);
+              alert(error?.data?.message);
+            }
+          } else {
+            alert('Please select tx');
+          }
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      const getWalletContract = async () => {
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send('eth_requestAccounts', []);
+        const signer = provider.getSigner();
+        console.log(provider);
+        const contract = new ethers.Contract(
+          walletContract,
+          CONTRACT_ABI,
+          signer,
+        ).connect(signer);
+        return contract;
+      };
+
+      const CONTRACT_ABI = [
+        {
+          inputs: [
+            {
+              internalType: 'address',
+              name: '_managerAdress',
+              type: 'address',
+            },
+            {
+              internalType: 'address',
+              name: '_token',
+              type: 'address',
+            },
+          ],
+          stateMutability: 'nonpayable',
+          type: 'constructor',
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: false,
+              internalType: 'address',
+              name: '_address',
+              type: 'address',
+            },
+            {
+              indexed: false,
+              internalType: 'uint256',
+              name: '_amount',
+              type: 'uint256',
+            },
+            {
+              indexed: false,
+              internalType: 'uint256',
+              name: '_time',
+              type: 'uint256',
+            },
+          ],
+          name: 'Deposit',
+          type: 'event',
+        },
+        {
+          anonymous: false,
+          inputs: [
+            {
+              indexed: false,
+              internalType: 'address',
+              name: '_address',
+              type: 'address',
+            },
+            {
+              indexed: false,
+              internalType: 'uint256',
+              name: '_amount',
+              type: 'uint256',
+            },
+            {
+              indexed: false,
+              internalType: 'string',
+              name: 'id',
+              type: 'string',
+            },
+            {
+              indexed: false,
+              internalType: 'uint256',
+              name: '_time',
+              type: 'uint256',
+            },
+          ],
+          name: 'Withdraw',
+          type: 'event',
+        },
+        {
+          inputs: [
+            {
+              internalType: 'bool',
+              name: '_isSelfAllow',
+              type: 'bool',
+            },
+          ],
+          name: 'ChangeSelfAllowed',
+          outputs: [],
+          stateMutability: 'payable',
+          type: 'function',
+        },
+        {
+          inputs: [
+            {
+              internalType: 'address',
+              name: '_address',
+              type: 'address',
+            },
+          ],
+          name: 'changeManager',
+          outputs: [],
+          stateMutability: 'nonpayable',
+          type: 'function',
+        },
+        {
+          inputs: [
+            {
+              internalType: 'address',
+              name: '_address',
+              type: 'address',
+            },
+          ],
+          name: 'changeOwner',
+          outputs: [],
+          stateMutability: 'nonpayable',
+          type: 'function',
+        },
+        {
+          inputs: [
+            {
+              internalType: 'uint256',
+              name: 'amount',
+              type: 'uint256',
+            },
+          ],
+          name: 'deposit',
+          outputs: [],
+          stateMutability: 'payable',
+          type: 'function',
+        },
+        {
+          inputs: [
+            {
+              internalType: 'address',
+              name: '_address',
+              type: 'address',
+            },
+            {
+              internalType: 'uint256',
+              name: '_amount',
+              type: 'uint256',
+            },
+            {
+              internalType: 'string',
+              name: 'id',
+              type: 'string',
+            },
+            {
+              internalType: 'uint256',
+              name: 'operation',
+              type: 'uint256',
+            },
+          ],
+          name: 'handleTransaction',
+          outputs: [],
+          stateMutability: 'nonpayable',
+          type: 'function',
+        },
+        {
+          inputs: [
+            {
+              internalType: 'address',
+              name: '',
+              type: 'address',
+            },
+          ],
+          name: 'holderBalance',
+          outputs: [
+            {
+              internalType: 'uint256',
+              name: '',
+              type: 'uint256',
+            },
+          ],
+          stateMutability: 'view',
+          type: 'function',
+        },
+        {
+          inputs: [],
+          name: 'isSelfAllow',
+          outputs: [
+            {
+              internalType: 'bool',
+              name: '',
+              type: 'bool',
+            },
+          ],
+          stateMutability: 'view',
+          type: 'function',
+        },
+        {
+          inputs: [],
+          name: 'managerAdress',
+          outputs: [
+            {
+              internalType: 'address',
+              name: '',
+              type: 'address',
+            },
+          ],
+          stateMutability: 'view',
+          type: 'function',
+        },
+        {
+          inputs: [],
+          name: 'ownerAddress',
+          outputs: [
+            {
+              internalType: 'address',
+              name: '',
+              type: 'address',
+            },
+          ],
+          stateMutability: 'view',
+          type: 'function',
+        },
+        {
+          inputs: [],
+          name: 'token',
+          outputs: [
+            {
+              internalType: 'contract ERC720',
+              name: '',
+              type: 'address',
+            },
+          ],
+          stateMutability: 'view',
+          type: 'function',
+        },
+        {
+          inputs: [
+            {
+              internalType: 'string',
+              name: '',
+              type: 'string',
+            },
+          ],
+          name: 'txDone',
+          outputs: [
+            {
+              internalType: 'bool',
+              name: '',
+              type: 'bool',
+            },
+          ],
+          stateMutability: 'view',
+          type: 'function',
+        },
+        {
+          inputs: [
+            {
+              internalType: 'address',
+              name: '_address',
+              type: 'address',
+            },
+            {
+              internalType: 'uint256',
+              name: '_amount',
+              type: 'uint256',
+            },
+            {
+              internalType: 'string',
+              name: 'id',
+              type: 'string',
+            },
+          ],
+          name: 'withdraw',
+          outputs: [],
+          stateMutability: 'payable',
+          type: 'function',
+        },
+        {
+          inputs: [
+            {
+              internalType: 'address[]',
+              name: '_address',
+              type: 'address[]',
+            },
+            {
+              internalType: 'uint256[]',
+              name: '_amount',
+              type: 'uint256[]',
+            },
+            {
+              internalType: 'string[]',
+              name: 'id',
+              type: 'string[]',
+            },
+          ],
+          name: 'withdrawMultiple',
+          outputs: [],
+          stateMutability: 'payable',
+          type: 'function',
+        },
+        {
+          inputs: [
+            {
+              internalType: 'address',
+              name: '_address',
+              type: 'address',
+            },
+            {
+              internalType: 'uint256',
+              name: '_amount',
+              type: 'uint256',
+            },
+            {
+              internalType: 'string',
+              name: 'id',
+              type: 'string',
+            },
+          ],
+          name: 'withdrawSelf',
+          outputs: [],
+          stateMutability: 'payable',
+          type: 'function',
+        },
+      ];
+
+      async function sync() {
+        if ($('#sync-button').text().trim() === 'Sync withdraw request') {
+          document.getElementById('sync-button').innerHTML = 'Syncing...';
+
+          const response = await fetch('/api/wallet/update_tx', {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          document.getElementById('sync-button').innerHTML =
+            'Sync withdraw request';
+          alert('Sync done, refresh the page');
+        }
+      }
+    </script>
+    <title>Cubix withdraw requests</title>
+
+    <style>
+      #table-request {
+        font-family: Arial, Helvetica, sans-serif;
+        border-collapse: collapse;
+        width: 100%;
+      }
+
+      #table-request td,
+      #table-request th {
+        border: 1px solid #ddd;
+        padding: 8px;
+      }
+
+      #table-request tr:nth-child(even) {
+        background-color: #f2f2f2;
+      }
+
+      #table-request tr:hover {
+        background-color: #ddd;
+      }
+
+      #table-request th {
+        padding-top: 12px;
+        padding-bottom: 12px;
+        text-align: left;
+        background-color: #04aa6d;
+        color: white;
+      }
+
+      .button {
+        background-color: #4caf50; /* Green */
+        border: none;
+        color: white;
+        padding: 15px 32px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        margin-top: 12px;
+        margin-bottom: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <h4 id="viewer"></h4>
+    <button class="button" id="sync-button" onclick="sync()">
+      Sync withdraw request
+    </button>
+
+    <form method="post">
+      <table id="table-request">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Date</th>
+            <th>Account</th>
+            <th>Withdrawal Account</th>
+            <th>Amount</th>
+            <th>Id</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+      <button class="button">Approve selected withdraw</button>
+    </form>
+  </body>
+</html>

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+
+    <script>
+      const connectWithWallet = async () => {
+        const params = new Proxy(new URLSearchParams(window.location.search), {
+          get: (searchParams, prop) => searchParams.get(prop),
+        });
+        const n = params?.n;
+        const a = params?.a;
+
+        if (window.ethereum) {
+          document.getElementById('viewer').innerHTML = 'Connecting wallet...';
+          const accounts = await window.ethereum.request({
+            method: 'eth_requestAccounts',
+          });
+          const web3 = new Web3(window.ethereum);
+          const msg_hash = web3.utils.sha3('Message');
+          try {
+            const signature = await web3.eth.personal.sign(
+              web3.utils.fromUtf8(
+                `Signing with one-time nonce for cubixpro: ${n}`,
+              ),
+              accounts[0],
+              n,
+            );
+            // call api here to connect with given accessToken
+            const response = await fetch('/api/auth/connect-wallet', {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${a}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                signature,
+                walletAddress: accounts?.[0],
+              }),
+            });
+
+            const json = await response?.json();
+            if (json?.status) {
+              document.getElementById('viewer').innerHTML =
+                'Wallet connected, please close this tab and open CUBIX app';
+            } else {
+              document.getElementById('viewer').innerHTML = json.message;
+            }
+          } catch (error) {
+            document.getElementById('viewer').innerHTML =
+              'Something went wrong, Please try again later. Try again clicking on connect button from app or check for wallet address.';
+          }
+        } else {
+          alert('No web3 wallet found');
+        }
+      };
+      document.addEventListener('DOMContentLoaded', function () {
+        connectWithWallet();
+      });
+    </script>
+    <title>Cubix Sign in with metamask</title>
+  </head>
+  <body>
+    <label>Connect with Metamask</label>
+    <h4 id="viewer"></h4>
+  </body>
+</html>

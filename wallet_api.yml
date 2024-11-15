@@ -1,0 +1,68 @@
+-----------------------------------------------------------------------
+User needs to register with wallet api
+-----------------------------------------------------------------------
+    curl --location --request POST 'localhost:3001/api/auth/register' \
+    --header 'x-wallet-api-key: 123' \
+    --header 'Content-Type: application/json' \
+    --data-raw '{
+        "_id": "1"
+    }'
+
+
+-----------------------------------------------------------------------
+User needs to login with wallet api to get access token
+-----------------------------------------------------------------------
+    curl --location --request POST 'localhost:3001/api/auth/login' \
+    --header 'x-wallet-api-key: 123' \
+    --header 'Content-Type: application/json' \
+    --data-raw '{
+        "accountAddress": "0x535496cC5647910329116642c50D66445C3A2403"
+    }'
+
+
+-----------------------------------------------------------------------
+User details
+-----------------------------------------------------------------------
+    curl --location --request GET 'localhost:3001/api/auth/me' \
+    --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50QWRkcmVzcyI6IjB4ZDlEQTYwOEJBODY1RUUyQTgwOTE0M0E4ZDc2ZURlOGYxQTE2NjlEYyIsImlhdCI6MTY3MzM3MDI4OCwiZXhwIjoxNjczNDU2Njg4fQ.vv1kE3N732IVzeERbS8qQTh6_fPcPFgbgS-45cMCRxY' \
+    --header 'x-wallet-api-key: 123'
+
+
+-----------------------------------------------------------------------
+Deposit amount
+-----------------------------------------------------------------------
+    curl --location --request POST 'localhost:3001/api/wallet/deposit' \
+    --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50QWRkcmVzcyI6IjB4ZDlEQTYwOEJBODY1RUUyQTgwOTE0M0E4ZDc2ZURlOGYxQTE2NjlEYyIsImlhdCI6MTY3MzM3MDI4OCwiZXhwIjoxNjczNDU2Njg4fQ.vv1kE3N732IVzeERbS8qQTh6_fPcPFgbgS-45cMCRxY' \
+    --header 'x-wallet-api-key: 123' \
+    --header 'Content-Type: application/json' \
+    --data-raw '{
+        "amount": 12
+    }'
+
+
+-----------------------------------------------------------------------
+Withdraw amount
+-----------------------------------------------------------------------
+    curl --location --request POST 'localhost:3001/api/wallet/withdraw' \
+    --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50QWRkcmVzcyI6IjB4NTM1NDk2Y0M1NjQ3OTEwMzI5MTE2NjQyYzUwRDY2NDQ1QzNBMjQwMyIsImlhdCI6MTY3NDMwOTAzNSwiZXhwIjoxNjc0Mzk1NDM1fQ.6xb4BiCiM4eLkrlBR0iEbHDgNNhzDz78klvJKAIlzdU' \
+    --header 'x-wallet-api-key: 123' \
+    --header 'Content-Type: application/json' \
+    --data-raw '{
+        "amount": 100
+    }'
+
+
+-----------------------------------------------------------------------
+Wallet stats
+-----------------------------------------------------------------------
+    curl --location --request GET 'localhost:3001/api/wallet/mine' \
+    --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50QWRkcmVzcyI6IjB4NTM1NDk2Y0M1NjQ3OTEwMzI5MTE2NjQyYzUwRDY2NDQ1QzNBMjQwMyIsImlhdCI6MTY3NDMwOTAzNSwiZXhwIjoxNjc0Mzk1NDM1fQ.6xb4BiCiM4eLkrlBR0iEbHDgNNhzDz78klvJKAIlzdU' \
+    --header 'x-wallet-api-key: 123'
+
+
+-----------------------------------------------------------------------
+Wallet transactions
+-----------------------------------------------------------------------
+    curl --location --request GET 'localhost:3001/api/wallet/transactions' \
+    --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50QWRkcmVzcyI6IjB4NTM1NDk2Y0M1NjQ3OTEwMzI5MTE2NjQyYzUwRDY2NDQ1QzNBMjQwMyIsImlhdCI6MTY3NDMwOTAzNSwiZXhwIjoxNjc0Mzk1NDM1fQ.6xb4BiCiM4eLkrlBR0iEbHDgNNhzDz78klvJKAIlzdU' \
+    --header 'x-wallet-api-key: 123'
